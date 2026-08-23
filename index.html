@@ -362,7 +362,7 @@
                     📸 この結果を画像で保存
                 </button>
             </div>
-            <p class="text-[10px] text-slate-500 mt-2">スマホ1画面に収まる縦長の結果画像（PNG）を保存します。そのままLINE等でお客様に共有できます。うまく保存できない場合は、表示された画像を長押しして保存してください。</p>
+            <p class="text-[10px] text-slate-500 mt-2">スマホ1画面に収まる縦長の結果画像（PNG）を作ります。<strong>iPhone等では共有メニューの「画像を保存」で写真フォルダに保存</strong>できます（保存画面が出ない場合は、表示された画像を長押し→「"写真"に追加」）。パソコンではファイルとして保存されます。</p>
         </section>
 
         <!-- SPREADSHEET TABLE -->
@@ -1145,7 +1145,31 @@
             return card;
         }
 
-        function downloadResultImage() {
+        function isMobileDevice() {
+            return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                   (navigator.maxTouchPoints > 1 && /Mac|Mac OS/i.test(navigator.platform || ''));
+        }
+
+        function canvasToBlob(canvas) {
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        function showImageOverlay(url) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.92);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;overflow:auto;';
+            overlay.innerHTML = `
+                <div style="color:#fff;font-size:13px;font-weight:700;text-align:center;margin:8px 0 12px;line-height:1.6;">
+                    画像を長押しして「&quot;写真&quot;に追加」を選ぶと<br>スマホの写真フォルダに保存できます
+                </div>
+                <img src="${url}" style="max-width:100%;height:auto;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);" alt="試算結果">
+                <button type="button" style="margin-top:16px;padding:12px 24px;background:#fff;color:#0f172a;font-weight:700;font-size:14px;border:none;border-radius:10px;">閉じる</button>
+            `;
+            overlay.querySelector('button').onclick = () => document.body.removeChild(overlay);
+            overlay.onclick = (e) => { if (e.target === overlay) document.body.removeChild(overlay); };
+            document.body.appendChild(overlay);
+        }
+
+        async function downloadResultImage() {
             if (typeof html2canvas === 'undefined') {
                 showToast('⚠️ 画像ライブラリの読込中です。数秒後にもう一度お試しください。');
                 return;
@@ -1153,25 +1177,55 @@
             if (!lastResult) { calculate(false); }
             const card = buildExportCard();
             document.body.appendChild(card);
-            html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then((canvas) => {
-                if (document.body.contains(card)) document.body.removeChild(card);
-                canvas.toBlob((blob) => {
-                    if (!blob) { showToast('⚠️ 画像化に失敗しました。'); return; }
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = '購入vs賃貸_試算結果.png';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    setTimeout(() => URL.revokeObjectURL(url), 5000);
-                    showToast('✅ 結果画像を保存しました（開けない場合は画像を長押しで保存）');
-                }, 'image/png');
-            }).catch((err) => {
+            let blob;
+            try {
+                const canvas = await html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+                blob = await canvasToBlob(canvas);
+            } catch (err) {
                 console.error(err);
                 if (document.body.contains(card)) document.body.removeChild(card);
                 showToast('⚠️ 画像化に失敗しました。');
-            });
+                return;
+            }
+            if (document.body.contains(card)) document.body.removeChild(card);
+            if (!blob) { showToast('⚠️ 画像化に失敗しました。'); return; }
+
+            const fileName = '購入vs賃貸_試算結果.png';
+            const mobile = isMobileDevice();
+
+            // Mobile: open the native share sheet → tap "画像を保存" to save into Photos
+            if (mobile && navigator.canShare) {
+                try {
+                    const file = new File([blob], fileName, { type: 'image/png' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: '購入 vs 賃貸 試算結果' });
+                        showToast('✅ 共有メニューの「画像を保存」で写真に保存できます');
+                        return;
+                    }
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return; // user canceled the share sheet
+                    // otherwise fall through to the long-press overlay
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+
+            // Mobile fallback: show the image so it can be long-pressed and saved to Photos
+            if (mobile) {
+                showImageOverlay(url);
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                return;
+            }
+
+            // Desktop: download as a file
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            showToast('✅ 結果画像を保存しました');
         }
 
         function showToast(msg) {
