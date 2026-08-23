@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>東京都 マンション 購入 vs 賃貸 かんたん比較シミュレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 380px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 360px;
+            }
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased leading-relaxed pb-12">
+
+    <header class="bg-slate-900 text-white py-6 px-4 sm:px-6 shadow-md">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <span class="bg-sky-500/20 text-sky-300 border border-sky-400/30 text-[11px] font-bold px-2.5 py-0.5 rounded uppercase tracking-wider inline-block mb-1">
+                    東京都対応・購入 vs 賃貸 くらべる試算
+                </span>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-tight">
+                    マンション 購入 vs 賃貸 かんたん比較シミュレーター
+                </h1>
+            </div>
+            <div class="text-xs text-slate-400 bg-slate-800 p-2.5 rounded-lg border border-slate-700 max-w-md">
+                ※エリアと物件条件を入力すると、賃貸と購入の実質コストを試算します。数値はすべて自由に変更できます。表示結果は将来を保証するものではありません。
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- SECTION 1: AREA & PROPERTY SPECS -->
+        <section class="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">📍 ① 対象エリア & 物件スペック（入力・変更できます）</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                <div>
+                    <label for="area_zone" class="text-xs font-bold text-slate-700 block mb-1">都内主要エリア選択：</label>
+                    <select id="area_zone" onchange="handleZoneChange()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-lg p-2.5 font-bold focus:ring-sky-500 focus:border-sky-500">
+                        <option value="jonan" selected>城南エリア (世田谷区・目黒区・品川区・大田区 / 用賀等)</option>
+                        <option value="toshin">都心5区 (千代田・中央・港・新宿・渋谷区)</option>
+                        <option value="josei">城西エリア (中野区・杉並区・練馬区)</option>
+                        <option value="johoku">城北エリア (文京区・豊島区・北区・荒川区・板橋区)</option>
+                        <option value="joto">城東エリア (台東区・墨田区・江東区・葛飾区・江戸川区)</option>
+                        <option value="tama">多摩エリア (武蔵野市・三鷹市・立川市・八王子市等)</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="area_address" class="text-xs font-bold text-slate-700 block mb-1">詳細な住所・最寄り駅（自由入力）：</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="area_address" value="世田谷区用賀" placeholder="例: 港区南青山 / 武蔵野市吉祥寺本町 / 目黒区中目黒" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-lg p-2.5 font-semibold focus:ring-sky-500 focus:border-sky-500">
+                        <button type="button" id="ai_search_btn" onclick="fetchAreaMarketData()" class="px-4 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition whitespace-nowrap flex items-center gap-1.5">
+                            <span id="ai_btn_icon">🔍</span>
+                            <span id="ai_btn_text">エリアの目安を反映</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property Detailed Spec Inputs -->
+            <div class="bg-slate-50 border border-slate-200 p-3 rounded-lg text-xs grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                <div>
+                    <label for="spec_age" class="font-bold text-slate-700 block mb-1">築年数</label>
+                    <div class="flex items-center gap-1">
+                        <input type="number" id="spec_age" value="49" min="0" max="70" onchange="autoTuneSpecs()" class="w-full bg-white border border-slate-300 rounded p-1.5 font-bold text-right text-slate-900">
+                        <span class="text-slate-500 font-semibold">年</span>
+                    </div>
+                </div>
+                <div>
+                    <label for="spec_walk" class="font-bold text-slate-700 block mb-1">駅徒歩</label>
+                    <select id="spec_walk" onchange="autoTuneSpecs()" class="w-full bg-white border border-slate-300 rounded p-1.5 font-bold text-slate-900">
+                        <option value="1">1分以内</option>
+                        <option value="3" selected>3分</option>
+                        <option value="5">5分</option>
+                        <option value="7">7分</option>
+                        <option value="10">10分</option>
+                        <option value="15">15分以上</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="spec_size" class="font-bold text-slate-700 block mb-1">専有面積</label>
+                    <div class="flex items-center gap-1">
+                        <input type="number" id="spec_size" value="53.98" step="0.1" min="10" max="300" onchange="autoTuneSpecs()" class="w-full bg-white border border-slate-300 rounded p-1.5 font-bold text-right text-slate-900">
+                        <span class="text-slate-500 font-semibold">㎡</span>
+                    </div>
+                </div>
+                <div>
+                    <label for="spec_renovated" class="font-bold text-slate-700 block mb-1">内装状態</label>
+                    <select id="spec_renovated" onchange="autoTuneSpecs()" class="w-full bg-white border border-slate-300 rounded p-1.5 font-bold text-slate-900">
+                        <option value="full" selected>✨ フルリノベーション済</option>
+                        <option value="partial">🧹 部分リフォーム済</option>
+                        <option value="none">🏠 リノベ未実施（築古）</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Market summary box -->
+            <div id="ai_summary_box" class="bg-sky-50/60 border border-sky-200 p-3 rounded-lg text-xs space-y-1">
+                <div class="font-bold text-sky-900 flex items-center justify-between">
+                    <span id="area_data_title">📈 [前提] 城南エリア × 築49年 × 徒歩3分 × フルリノベ の目安（参考値）</span>
+                    <span id="tsubo_price_badge" class="bg-sky-200 text-sky-900 text-[10px] px-2 py-0.5 rounded font-bold">推定坪単価: 378万円/坪</span>
+                </div>
+                <div id="area_data_desc" class="text-slate-600">
+                    世田谷区用賀エリアは駅徒歩3分と利便性が高く、築49年ですがフルリノベ済で内装価値は維持されています。表示の変動率はあくまで前提（目安）であり、将来の価格を予測・保証するものではありません。築古物件は下落する可能性もあります。
+                </div>
+            </div>
+
+            <div class="border-t border-slate-200 mt-4 pt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-700">エリア別シナリオ切替（ワンタップ）：</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" id="btn_preset_standard" onclick="applyPreset('standard')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg border border-slate-300 transition shadow-sm">
+                        ⚖️ エリア標準 (賃料+0.8%, 物件+0.5%)
+                    </button>
+                    <button type="button" id="btn_preset_bull" onclick="applyPreset('bull')" class="px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-800 text-xs font-bold rounded-lg border border-sky-300 transition shadow-sm">
+                        🚀 エリア強気 (賃料+1.5%, 物件+1.5%)
+                    </button>
+                    <button type="button" id="btn_preset_bear" onclick="applyPreset('bear')" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold rounded-lg border border-amber-300 transition shadow-sm">
+                        🛡️ エリア保守 (賃料0.0%, 物件-1.0%)
+                    </button>
+                </div>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2 w-full text-right">💡 公平な比較のため「🛡️ 保守（下落想定）」も必ずお試しください。前提しだいで結果は大きく変わります。</p>
+
+            <div class="border-t border-slate-200 mt-3 pt-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 bg-slate-50 p-3 rounded-lg">
+                <div class="text-xs text-slate-600 font-bold flex items-center gap-1">
+                    <span>📤 条件共有・保存機能：</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <button type="button" onclick="copyConditionCode()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1">
+                        📋 現在の条件URLをコピー
+                    </button>
+                    <button type="button" onclick="toggleRestoreInput()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition flex items-center gap-1">
+                        📥 条件コードを貼り付けて復元
+                    </button>
+                </div>
+            </div>
+
+            <div id="restore_box" class="hidden mt-3 p-3 bg-slate-100 border border-slate-300 rounded-lg space-y-2">
+                <label for="restore_text" class="text-xs font-bold text-slate-700 block">共有された条件コードまたはURLを下に貼り付けて「復元」を押してください：</label>
+                <div class="flex gap-2">
+                    <input type="text" id="restore_text" placeholder="例: https://...#param_years=10&rent_monthly=28..." class="w-full bg-white border border-slate-300 text-xs rounded p-2 text-slate-800 font-mono">
+                    <button type="button" onclick="applyConditionCode()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg whitespace-nowrap">
+                        条件を復元
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div id="toast_message" class="hidden fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg border border-slate-700 z-50 transition-all flex items-center gap-2">
+            <span id="toast_text">✅ 条件コードをコピーしました！</span>
+        </div>
+
+        <!-- SECTION 2: COMMON YEARS -->
+        <section class="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    ⚙️ ② 共通設定（居住想定期間）
+                </h2>
+            </div>
+            <div class="flex items-center gap-4 max-w-xs">
+                <label for="param_years" class="text-xs font-bold text-slate-700 whitespace-nowrap">居住想定期間：</label>
+                <div class="flex items-center gap-1.5 w-full">
+                    <input type="number" id="param_years" value="10" min="1" max="40" class="w-20 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2 font-bold text-right focus:ring-sky-500 focus:border-sky-500">
+                    <span class="text-xs font-bold text-slate-600">年間</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: RENT VS BUY INPUT PANELS -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- RENT PANEL -->
+            <div class="bg-amber-50/40 rounded-xl p-4 sm:p-5 shadow-sm border border-amber-200">
+                <h2 class="text-base font-bold text-amber-900 mb-3 border-b border-amber-200 pb-2 flex items-center justify-between">
+                    <span>🏢 【賃貸】条件</span>
+                    <span class="text-xs font-normal text-amber-700">（単位：万円）</span>
+                </h2>
+                <div class="space-y-3 text-xs">
+                    <div class="flex items-center justify-between">
+                        <label for="rent_monthly" class="font-medium text-slate-700">現在の月額家賃</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="rent_monthly" value="28" step="0.5" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">万円/月</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between bg-amber-100/50 p-2 rounded border border-amber-200">
+                        <div>
+                            <label for="rent_inflation" class="font-bold text-amber-900 block">📈 賃料年上昇率（前提・変更可）</label>
+                            <span class="text-[10px] text-amber-700 block">※1年あたりの平均上昇率（%）。予測ではありません</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="rent_inflation" value="0.8" step="0.1" min="-3" max="5" class="w-24 bg-white border border-amber-400 text-slate-900 text-sm rounded p-1.5 font-bold text-right">
+                            <span class="text-amber-900 font-bold">% / 年</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="rent_admin" class="font-medium text-slate-700">共益費・管理費</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="rent_admin" value="2" step="0.1" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">万円/月</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="rent_subsidy" class="font-medium text-slate-700">家賃補助・手当</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="rent_subsidy" value="6" step="0.5" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">万円/月</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="rent_initial_months" class="font-medium text-slate-700">初期費用（敷・礼・手数料等）</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="rent_initial_months" value="5" step="0.5" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">ヶ月分</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="rent_renewal_months" class="font-medium text-slate-700">更新料（2年ごと）</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="rent_renewal_months" value="1" step="0.5" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">ヶ月分</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUY PANEL -->
+            <div class="bg-sky-50/40 rounded-xl p-4 sm:p-5 shadow-sm border border-sky-200">
+                <h2 class="text-base font-bold text-sky-900 mb-3 border-b border-sky-200 pb-2 flex items-center justify-between">
+                    <span>🔑 【購入】条件</span>
+                    <span class="text-xs font-normal text-sky-700">（単位：万円 / %）</span>
+                </h2>
+                <div class="space-y-3 text-xs">
+                    <div class="flex items-center justify-between">
+                        <label for="buy_price" class="font-medium text-slate-700">物件購入価格</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_price" value="6180" step="100" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">万円</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between bg-sky-100/50 p-2 rounded border border-sky-200">
+                        <div>
+                            <label for="buy_appreciation" class="font-bold text-sky-900 block">🌏 土地・市況の年変動率（前提・変更可）</label>
+                            <span class="text-[10px] text-sky-700 block">※土地価格の年変動。建物の古さは築年数から自動で減価します</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_appreciation" value="0.9" step="0.1" min="-5" max="5" class="w-24 bg-white border border-sky-400 text-slate-900 text-sm rounded p-1.5 font-bold text-right">
+                            <span class="text-sky-900 font-bold">% / 年</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="land_ratio" class="font-medium text-slate-700">土地の割合（築年数から自動・変更可）</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="land_ratio" value="90" step="1" min="0" max="100" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="building_lifespan" class="font-medium text-slate-700">建物の耐用年数（RC造=47年）</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="building_lifespan" value="47" step="1" min="10" max="70" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">年</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="buy_downpayment" class="font-medium text-slate-700">頭金</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_downpayment" value="0" step="100" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">万円</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="buy_loan_years" class="font-medium text-slate-700">ローン借入期間</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_loan_years" value="28" step="1" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">年</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="buy_rate" class="font-medium text-slate-700">借入金利（年利）</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_rate" value="1.5" step="0.05" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="buy_initial_cost_pct" class="font-medium text-slate-700">購入諸費用</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_initial_cost_pct" value="8" step="0.5" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="buy_admin_monthly" class="font-medium text-slate-700">月額管理費・修繕積立金</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_admin_monthly" value="2.8" step="0.1" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">万円/月</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="buy_tax_yearly" class="font-medium text-slate-700">固定資産税（年額）</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_tax_yearly" value="10" step="1" class="w-24 bg-white border border-slate-300 text-slate-900 text-sm rounded p-1.5 font-semibold text-right">
+                            <span class="text-slate-500">万円/年</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between border-t border-sky-200 pt-2 mt-2">
+                        <label for="buy_sale_price" class="font-bold text-slate-800">想定売却額（土地＋建物モデルで自動算出・変更可）</label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="buy_sale_price" value="7102" step="10" class="w-24 bg-sky-100 border border-sky-400 text-slate-900 text-sm rounded p-1.5 font-bold text-right">
+                            <span class="text-slate-500">万円</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- KPI SUMMARY CARDS -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div class="bg-amber-100/70 border border-amber-300 rounded-xl p-4">
+                <span class="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-1">🏢 賃貸：総実質コスト（上昇考慮）</span>
+                <span id="kpi_rent_net" class="text-2xl sm:text-3xl font-extrabold text-amber-900">0</span>
+                <span id="kpi_rent_net_unit" class="text-xs text-amber-800"> 万円</span>
+                <div id="kpi_rent_monthly_avg" class="text-[11px] text-amber-700 mt-1">月平均実質: 0 万円</div>
+            </div>
+
+            <div id="kpi_buy_card" class="bg-sky-100/70 border border-sky-300 rounded-xl p-4 transition-all">
+                <span id="kpi_buy_title" class="text-xs font-bold text-sky-800 uppercase tracking-wider block mb-1">🔑 購入：総実質コスト（売却手取り考慮）</span>
+                <span id="kpi_buy_net" class="text-2xl sm:text-3xl font-extrabold text-sky-900">0</span>
+                <span id="kpi_buy_net_unit" class="text-xs text-sky-800"> 万円</span>
+                <div id="kpi_buy_monthly_avg" class="text-[11px] text-sky-700 mt-1">月平均実質: 0 万円</div>
+            </div>
+
+            <div class="bg-slate-800 text-white border border-slate-700 rounded-xl p-4 flex flex-col justify-center">
+                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">⚖️ 試算上の差額</span>
+                <div>
+                    <span id="kpi_diff_amount" class="text-2xl sm:text-3xl font-extrabold text-amber-400">0</span>
+                    <span class="text-xs text-slate-300"> 万円</span>
+                </div>
+                <div id="kpi_diff_label" class="text-[11px] text-slate-300 mt-1">--</div>
+            </div>
+        </section>
+        <p class="text-center text-[11px] text-slate-500">※本結果は入力された前提に基づく<strong>概算</strong>です。将来の家賃・価格・金利・売却額を保証するものではありません。</p>
+
+        <!-- DOWNLOAD RESULT -->
+        <section class="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                <div class="flex-1">
+                    <label for="brand_name" class="text-xs font-bold text-slate-700 block mb-1">担当者名・店舗名（任意・画像に表示されます）</label>
+                    <input type="text" id="brand_name" value="ないけんぼーいず" placeholder="例: ないけんぼーいず ／ 担当 ◯◯" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-lg p-2.5 font-semibold focus:ring-sky-500 focus:border-sky-500">
+                </div>
+                <button type="button" onclick="downloadResultImage()" class="px-5 py-3 bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-700 hover:to-sky-700 text-white text-sm font-bold rounded-lg shadow-md transition whitespace-nowrap flex items-center justify-center gap-2">
+                    📸 この結果を画像で保存
+                </button>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2">スマホ1画面に収まる縦長の結果画像（PNG）を作ります。<strong>iPhone等では共有メニューの「画像を保存」で写真フォルダに保存</strong>できます（保存画面が出ない場合は、表示された画像を長押し→「"写真"に追加」）。パソコンではファイルとして保存されます。</p>
+        </section>
+
+        <!-- SPREADSHEET TABLE -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    📋 項目別比較スプレッドシート（試算明細）
+                </h2>
+                <span id="sheet_period_label" class="text-xs font-bold text-sky-700 bg-sky-100 px-2.5 py-1 rounded-full">10年間の試算</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                            <th class="p-3 w-1/3">比較項目</th>
+                            <th class="p-3 w-1/4 text-right bg-amber-50/50 text-amber-900">🏢 賃貸（継続）</th>
+                            <th class="p-3 w-1/4 text-right bg-sky-50/50 text-sky-900">🔑 購入（所有）</th>
+                            <th class="p-3 text-right">備考・計算ロジック</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 text-slate-700">
+                        <tr>
+                            <td class="p-3 font-semibold bg-slate-50/50">1. 初期費用</td>
+                            <td id="cell_rent_initial" class="p-3 text-right font-medium bg-amber-50/20">0 万円</td>
+                            <td id="cell_buy_initial" class="p-3 text-right font-medium bg-sky-50/20">0 万円</td>
+                            <td class="p-3 text-right text-slate-500 text-[11px]">賃貸: 敷礼仲等 / 購入: 諸費用＋頭金</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-semibold bg-slate-50/50">2. 居住期間中の累積支払費用</td>
+                            <td id="cell_rent_cum_pay" class="p-3 text-right font-medium bg-amber-50/20">0 万円</td>
+                            <td id="cell_buy_cum_pay" class="p-3 text-right font-medium bg-sky-50/20">0 万円</td>
+                            <td class="p-3 text-right text-slate-500 text-[11px]">期間内の全キャッシュアウト（更新料・上昇分含）</td>
+                        </tr>
+                        <tr class="bg-slate-50">
+                            <td class="p-3 font-semibold text-slate-900">　├ 内：住居費・ローン返済</td>
+                            <td id="cell_rent_sub_rent" class="p-3 text-right bg-amber-50/20">0 万円</td>
+                            <td id="cell_buy_sub_loan" class="p-3 text-right bg-sky-50/20">0 万円</td>
+                            <td class="p-3 text-right text-slate-500 text-[11px]">賃貸は年率上昇積算 / 購入は元利合計</td>
+                        </tr>
+                        <tr class="bg-slate-50">
+                            <td class="p-3 font-semibold text-slate-900">　├ 内：維持管理費・税金等</td>
+                            <td id="cell_rent_sub_admin" class="p-3 text-right bg-amber-50/20">0 万円</td>
+                            <td id="cell_buy_sub_admin" class="p-3 text-right bg-sky-50/20">0 万円</td>
+                            <td class="p-3 text-right text-slate-500 text-[11px]">賃貸: 共益費・更新料 / 購入: 管理費積立金・固資税</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-semibold bg-slate-50/50">3. 期間終了時のローン残債</td>
+                            <td class="p-3 text-right text-slate-400 bg-amber-50/20">-- (0 万円)</td>
+                            <td id="cell_buy_loan_remain" class="p-3 text-right font-medium bg-sky-50/20 text-red-600">0 万円</td>
+                            <td class="p-3 text-right text-slate-500 text-[11px]">指定年数経過時点のローン残り未払額</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 font-semibold bg-slate-50/50">4. 期間終了時の想定売却手取り</td>
+                            <td class="p-3 text-right text-slate-400 bg-amber-50/20">-- (0 万円)</td>
+                            <td id="cell_buy_net_sale" class="p-3 text-right font-medium bg-sky-50/20 text-emerald-600">0 万円</td>
+                            <td class="p-3 text-right text-slate-500 text-[11px]">土地+建物(築年減価)モデルの売却額 - 諸費用(3.3%) - 残債返済</td>
+                        </tr>
+                        <tr class="font-bold text-sm bg-slate-100 border-t-2 border-slate-300">
+                            <td class="p-3 text-slate-900">5. 実質総コスト（累積支出 - 回収額）</td>
+                            <td id="cell_rent_net_total" class="p-3 text-right text-amber-900 bg-amber-100/50">0 万円</td>
+                            <td id="cell_buy_net_total" class="p-3 text-right text-sky-900 bg-sky-100/50">0 万円</td>
+                            <td class="p-3 text-right text-slate-600 text-[11px]">※資産回収後の実質純負担額（マイナスは純利益）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TIMELINE CHART -->
+        <section class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+            <h2 class="text-sm font-bold text-slate-900 mb-3">
+                📈 経過年数ごとの実質累計コスト推移（賃貸 vs 購入）
+            </h2>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </section>
+
+        <!-- DISCLAIMER -->
+        <section class="bg-amber-50 text-amber-900 text-[11px] p-4 rounded-xl border border-amber-300 leading-normal space-y-1.5">
+            <div class="font-bold text-amber-900 mb-1 text-xs">【重要】ご利用にあたっての注意事項</div>
+            <p>・本ツールは、お客様が入力・選択された前提に基づく<strong>概算シミュレーション</strong>です。将来の家賃・不動産価格・金利・売却額を予測または保証するものではありません。</p>
+            <p>・「エリアの目安」として表示される変動率等は、一般的な傾向を簡易的に反映した参考値であり、個別物件の将来価値を示すものではありません。</p>
+            <p>・実際のローン審査結果・金利・税額・諸費用・管理費・修繕積立金等は、金融機関・税理士・管理組合など専門機関に必ずご確認ください。</p>
+            <p>・本試算には次の要素は含まれていません（含めると結果は変動します）：住宅ローン控除、団体信用生命保険、修繕積立金の将来的な増額、大規模修繕・専有部リフォーム費用、頭金・諸費用・月々差額を運用した場合の収益（機会損失）、税制改正 等。</p>
+            <p>・本ツールは特定物件の購入を勧誘・保証するものではありません。最終的なご判断は、専門家にご相談のうえお客様ご自身の責任で行ってください。</p>
+        </section>
+
+        <!-- REFERENCES -->
+        <section class="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200 space-y-3">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                📚 試算モデル・相場の参照データソース一覧
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <a href="http://www.reins.or.jp/" target="_blank" rel="noopener noreferrer" class="p-3 bg-slate-50 hover:bg-sky-50 border border-slate-200 rounded-lg transition flex items-start gap-2 group">
+                    <span class="text-base">🏢</span>
+                    <div>
+                        <div class="font-bold text-slate-800 group-hover:text-sky-600 flex items-center gap-1">
+                            公益財団法人 東日本不動産流通機構（REINS）
+                            <span class="text-[10px] text-sky-500">↗</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">首都圏・東京都区部および市部の成約坪単価推移・価格維持率データ</p>
+                    </div>
+                </a>
+                <a href="https://www.kantei.ne.jp/" target="_blank" rel="noopener noreferrer" class="p-3 bg-slate-50 hover:bg-sky-50 border border-slate-200 rounded-lg transition flex items-start gap-2 group">
+                    <span class="text-base">📊</span>
+                    <div>
+                        <div class="font-bold text-slate-800 group-hover:text-sky-600 flex items-center gap-1">
+                            株式会社東京カンテイ（市場調査部）
+                            <span class="text-[10px] text-sky-500">↗</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">分譲マンション募集賃料月別推移・駅別リセールバリュー（築10年資産維持率）</p>
+                    </div>
+                </a>
+                <a href="https://www.reinfolib.mlit.go.jp/" target="_blank" rel="noopener noreferrer" class="p-3 bg-slate-50 hover:bg-sky-50 border border-slate-200 rounded-lg transition flex items-start gap-2 group">
+                    <span class="text-base">🏛️</span>
+                    <div>
+                        <div class="font-bold text-slate-800 group-hover:text-sky-600 flex items-center gap-1">
+                            国土交通省「不動産情報ライブラリ」
+                            <span class="text-[10px] text-sky-500">↗</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">東京都各自治体の実際の成約事例取引価格・公示地価・地価調査</p>
+                    </div>
+                </a>
+                <a href="https://www.stat.go.jp/data/ryoukin/index.html" target="_blank" rel="noopener noreferrer" class="p-3 bg-slate-50 hover:bg-sky-50 border border-slate-200 rounded-lg transition flex items-start gap-2 group">
+                    <span class="text-base">📈</span>
+                    <div>
+                        <div class="font-bold text-slate-800 group-hover:text-sky-600 flex items-center gap-1">
+                            総務省統計局「小売物価統計調査」
+                            <span class="text-[10px] text-sky-500">↗</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">東京都区部における民営借家家賃の価格指数・家賃上昇推移</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let chartInstance = null;
+        let lastResult = null;
+
+        function getNum(id) {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const val = parseFloat(el.value);
+            return isNaN(val) ? 0 : val;
+        }
+
+        function formatVal(val) {
+            if (isNaN(val) || val === null || val === undefined) return '0';
+            return Math.round(val).toLocaleString('ja-JP');
+        }
+
+        function wrapLabel(str, maxLen) {
+            if (!str) return '';
+            if (str.length <= maxLen) return str;
+            const res = [];
+            for (let i = 0; i < str.length; i += maxLen) {
+                res.push(str.substring(i, i + maxLen));
+            }
+            return res;
+        }
+
+        const areaZoneDatabase = {
+            jonan: {
+                title: "城南エリア（世田谷・目黒・品川・大田区 / 用賀等）",
+                rentInflation: 0.8,
+                buyAppreciation: 0.5
+            },
+            toshin: {
+                title: "都心5区（千代田・中央・港・新宿・渋谷区）",
+                rentInflation: 1.5,
+                buyAppreciation: 2.0
+            },
+            josei: {
+                title: "城西エリア（中野・杉並・練馬区）",
+                rentInflation: 0.8,
+                buyAppreciation: 0.8
+            },
+            johoku: {
+                title: "城北エリア（文京・豊島・北・荒川・板橋区）",
+                rentInflation: 0.7,
+                buyAppreciation: 0.8
+            },
+            joto: {
+                title: "城東エリア（台東・墨田・江東・葛飾・江戸川区）",
+                rentInflation: 0.8,
+                buyAppreciation: 1.0
+            },
+            tama: {
+                title: "多摩エリア（武蔵野・三鷹・立川・八王子市等）",
+                rentInflation: 0.5,
+                buyAppreciation: 0.3
+            }
+        };
+
+        let activeAreaBase = {
+            name: "城南",
+            rentInflation: 0.8,
+            buyAppreciation: 0.5
+        };
+
+        // Holds the baseline calculated appreciation rate before applying preset multipliers
+        let currentBaseTunedAppreciation = 0.5;
+
+        // 建物の価値：現在(築ageNow)の建物価値b0を、elapsed年後(築ageNow+elapsed)まで
+        // 耐用年数lifespanに対する定額法で減価させる。耐用年数を超えている建物は残存価値で横ばい。
+        function projectedBuildingValue(b0, ageNow, elapsed, lifespan) {
+            const remainNow = lifespan - ageNow;
+            if (remainNow <= 0) return b0;            // 既に法定耐用年数超：現価値を残存として横ばい
+            const remainAtSale = lifespan - ageNow - elapsed;
+            if (remainAtSale <= 0) return 0;          // 保有中に耐用年数を迎え、建物価値ゼロへ
+            return b0 * (remainAtSale / remainNow);
+        }
+
+        // 売却予想価格 ＝ 土地(市況で変動) ＋ 建物(築年数で減価) の二層モデル
+        function projectedSalePrice(landValue0, buildingValue0, landRatePct, ageNow, elapsed, lifespan) {
+            const land = landValue0 * Math.pow(1 + (landRatePct / 100), elapsed);
+            const building = projectedBuildingValue(buildingValue0, ageNow, elapsed, lifespan);
+            return land + building;
+        }
+
+        function autoTuneSpecs() {
+            const age = getNum('spec_age');
+            const walk = getNum('spec_walk');
+            const size = getNum('spec_size');
+            const renov = document.getElementById('spec_renovated').value;
+            const price = getNum('buy_price');
+            const lifespan = Math.max(1, getNum('building_lifespan') || 47);
+
+            if (size > 0 && price > 0) {
+                const tsubo = size / 3.30578;
+                const tsuboPrice = Math.round(price / tsubo);
+                document.getElementById('tsubo_price_badge').textContent = `推定坪単価: ${tsuboPrice.toLocaleString()}万円/坪 (${Math.round(price/size)}万/㎡)`;
+            }
+
+            // 土地・市況の年変動率：立地要因のみ（建物の古さは減価カーブ側で処理するため、ここでは築年数を使わない）
+            let landAdj = 0;
+            if (walk <= 3) landAdj += 0.4;
+            else if (walk <= 5) landAdj += 0.2;
+            else if (walk >= 11) landAdj -= 0.5;
+
+            currentBaseTunedAppreciation = Math.round((activeAreaBase.buyAppreciation + landAdj) * 10) / 10;
+            document.getElementById('buy_appreciation').value = currentBaseTunedAppreciation;
+
+            // 土地割合の目安：築年が進むほど建物価値が減り土地割合が上がる。リノベ済は建物価値を上乗せ（土地割合を下げる）。
+            let landRatio = 0.25 + 0.65 * Math.min(age, lifespan) / lifespan;
+            if (renov === 'full') landRatio -= 0.08;
+            else if (renov === 'partial') landRatio -= 0.04;
+            landRatio = Math.max(0.20, Math.min(0.92, landRatio));
+            document.getElementById('land_ratio').value = Math.round(landRatio * 100);
+
+            const renovText = renov === 'full' ? 'フルリノベ済' : (renov === 'partial' ? 'リフォーム済' : '築古現状');
+            const rateLabel = currentBaseTunedAppreciation > 0 ? '+' + currentBaseTunedAppreciation : currentBaseTunedAppreciation;
+            const summaryText = `${activeAreaBase.name}エリア / 築${age}年 / 徒歩${walk}分 / ${renovText} (${size}㎡)。売却額は「土地(市況${rateLabel}%/年) ＋ 建物(築年数で減価・耐用${lifespan}年)」の二層で自動計算。土地割合の目安は約${Math.round(landRatio * 100)}%です（いずれも変更可能な前提）。`;
+            document.getElementById('area_data_desc').textContent = summaryText;
+
+            updatePresetButtonsUI();
+            calculate(true);
+            updateUrlParams();
+        }
+
+        function updatePresetButtonsUI() {
+            const baseR = activeAreaBase.rentInflation;
+            const baseB = currentBaseTunedAppreciation;
+
+            const bullRent = (baseR + 0.7).toFixed(1);
+            const bullBuy = (baseB + 1.0).toFixed(1);
+            const bearRent = Math.max(0, baseR - 0.5).toFixed(1);
+            const bearBuy = (baseB - 1.5).toFixed(1);
+
+            const formatPct = (val) => (val > 0 ? `+${val}` : `${val}`);
+
+            document.getElementById('btn_preset_standard').textContent = `⚖️ エリア標準 (賃料+${baseR.toFixed(1)}%, 物件${formatPct(baseB.toFixed(1))}%)`;
+            document.getElementById('btn_preset_bull').textContent = `🚀 エリア強気 (賃料+${bullRent}%, 物件${formatPct(bullBuy)}%)`;
+            document.getElementById('btn_preset_bear').textContent = `🛡️ エリア保守 (賃料+${bearRent}%, 物件${formatPct(bearBuy)}%)`;
+        }
+
+        function applyPreset(type) {
+            const baseR = activeAreaBase.rentInflation;
+            const baseB = currentBaseTunedAppreciation;
+
+            let targetR = baseR;
+            let targetB = baseB;
+
+            if (type === 'standard') {
+                targetR = baseR;
+                targetB = baseB;
+            } else if (type === 'bull') {
+                targetR = baseR + 0.7;
+                targetB = baseB + 1.0;
+            } else if (type === 'bear') {
+                targetR = Math.max(0, baseR - 0.5);
+                targetB = baseB - 1.5;
+            }
+
+            document.getElementById('rent_inflation').value = targetR.toFixed(1);
+            document.getElementById('buy_appreciation').value = targetB.toFixed(1);
+
+            // Highlight active button
+            const btnStandard = document.getElementById('btn_preset_standard');
+            const btnBull = document.getElementById('btn_preset_bull');
+            const btnBear = document.getElementById('btn_preset_bear');
+
+            [btnStandard, btnBull, btnBear].forEach(btn => {
+                if (btn) btn.classList.remove('ring-2', 'ring-indigo-600', 'ring-offset-1', 'bg-slate-200', 'bg-sky-200', 'bg-amber-200');
+            });
+
+            if (type === 'standard' && btnStandard) btnStandard.classList.add('ring-2', 'ring-indigo-600', 'ring-offset-1', 'bg-slate-200');
+            if (type === 'bull' && btnBull) btnBull.classList.add('ring-2', 'ring-indigo-600', 'ring-offset-1', 'bg-sky-200');
+            if (type === 'bear' && btnBear) btnBear.classList.add('ring-2', 'ring-indigo-600', 'ring-offset-1', 'bg-amber-200');
+
+            calculate(true);
+            updateUrlParams();
+            showToast(`シナリオを切り替えました（${type === 'standard' ? '標準' : type === 'bull' ? '強気' : '保守'}）`);
+        }
+
+        function handleZoneChange() {
+            const zoneKey = document.getElementById('area_zone').value;
+            const data = areaZoneDatabase[zoneKey];
+            if (data) {
+                activeAreaBase = {
+                    name: data.title.split('（')[0],
+                    rentInflation: data.rentInflation,
+                    buyAppreciation: data.buyAppreciation
+                };
+                document.getElementById('area_data_title').textContent = `📈 [前提] ${data.title} の目安`;
+                document.getElementById('rent_inflation').value = data.rentInflation;
+                autoTuneSpecs();
+            }
+        }
+
+        function fetchAreaMarketData() {
+            const addressInput = document.getElementById('area_address').value.trim();
+            if (!addressInput) {
+                showToast("⚠️ 住所または駅名を入力してください");
+                return;
+            }
+
+            const btn = document.getElementById('ai_search_btn');
+            const icon = document.getElementById('ai_btn_icon');
+            const text = document.getElementById('ai_btn_text');
+
+            btn.disabled = true;
+            icon.textContent = "⏳";
+            text.textContent = "反映中...";
+
+            setTimeout(() => {
+                let detectedZone = "jonan";
+                let rentInf = 0.8;
+                let priceApp = 0.5;
+
+                if (/(千代田|中央|港区|新宿|渋谷|青山|赤坂|六本木|麻布|銀座|恵比寿|広尾|表参道|代々木)/.test(addressInput)) {
+                    detectedZone = "toshin";
+                    rentInf = 1.5;
+                    priceApp = 2.0;
+                }
+                else if (/(世田谷|目黒|品川|大田|用賀|二子玉川|自由が丘|中目黒|三軒茶屋|武蔵小山|成城|駒沢)/.test(addressInput)) {
+                    detectedZone = "jonan";
+                    rentInf = 0.8;
+                    priceApp = 0.5;
+                }
+                else if (/(中野|杉並|練馬|荻窪|高円寺|阿佐ヶ谷|方南町)/.test(addressInput)) {
+                    detectedZone = "josei";
+                    rentInf = 0.8;
+                    priceApp = 0.8;
+                }
+                else if (/(文京|豊島|北区|荒川|板橋|池袋|赤羽|駒込|巣鴨|後楽園)/.test(addressInput)) {
+                    detectedZone = "johoku";
+                    rentInf = 0.7;
+                    priceApp = 0.8;
+                }
+                else if (/(台東|墨田|江東|葛飾|江戸川|豊洲|有明|清澄白河|門前仲町|押上|錦糸町)/.test(addressInput)) {
+                    detectedZone = "joto";
+                    rentInf = 0.8;
+                    priceApp = 1.0;
+                }
+                else if (/(武蔵野|三鷹|立川|八王子|町田|調布|府中|吉祥寺|国分寺)/.test(addressInput)) {
+                    detectedZone = "tama";
+                    rentInf = 0.5;
+                    priceApp = 0.3;
+                }
+
+                activeAreaBase = {
+                    name: addressInput.length > 8 ? addressInput.substring(0, 8) + '…' : addressInput,
+                    rentInflation: rentInf,
+                    buyAppreciation: priceApp
+                };
+
+                document.getElementById('area_zone').value = detectedZone;
+                document.getElementById('rent_inflation').value = rentInf;
+                document.getElementById('area_data_title').textContent = `📈 [エリアの目安を反映] ${addressInput} の参考値`;
+
+                autoTuneSpecs();
+                showToast(`✅ ${addressInput} のエリア目安を反映しました`);
+
+                btn.disabled = false;
+                icon.textContent = "🔍";
+                text.textContent = "エリアの目安を反映";
+            }, 300);
+        }
+
+        function calculate(autoUpdateSalePrice = true) {
+            const years = Math.max(1, Math.min(40, getNum('param_years')));
+            const rentMonthly = getNum('rent_monthly');
+            const rentInflationPct = Math.max(-3, Math.min(5, getNum('rent_inflation')));
+            const rentAdmin = getNum('rent_admin');
+            const rentSubsidy = getNum('rent_subsidy');
+            const rentInitialMonths = getNum('rent_initial_months');
+            const rentRenewalMonths = getNum('rent_renewal_months');
+
+            const buyPrice = getNum('buy_price');
+            const buyAppreciationPct = Math.max(-5, Math.min(5, getNum('buy_appreciation')));
+            const landRatioPct = Math.max(0, Math.min(100, getNum('land_ratio')));
+            const buildingLifespan = Math.max(1, getNum('building_lifespan') || 47);
+            const buildingAge = getNum('spec_age');
+            const landValue0 = buyPrice * (landRatioPct / 100);
+            const buildingValue0 = buyPrice - landValue0;
+            const buyDownpayment = getNum('buy_downpayment');
+            const buyLoanYears = getNum('buy_loan_years') || 35;
+            const buyRate = getNum('buy_rate');
+            const buyInitialCostPct = getNum('buy_initial_cost_pct') || 8;
+            const buyAdminMonthly = getNum('buy_admin_monthly');
+            const buyTaxYearly = getNum('buy_tax_yearly');
+
+            if (autoUpdateSalePrice) {
+                const autoSalePrice = projectedSalePrice(landValue0, buildingValue0, buyAppreciationPct, buildingAge, years, buildingLifespan);
+                document.getElementById('buy_sale_price').value = Math.round(autoSalePrice);
+            }
+
+            const buySalePrice = getNum('buy_sale_price');
+            const buySaleCostPct = 3.3;
+
+            const rentInitialCost = rentMonthly * rentInitialMonths;
+            let rentCumRentNet = 0;
+            let rentCumAdmin = 0;
+            let rentCumRenewalCost = 0;
+
+            const rentYearlyData = [];
+            const buyYearlyData = [];
+
+            const loanPrincipal = Math.max(0, buyPrice - buyDownpayment);
+            const loanTotalMonths = buyLoanYears * 12;
+            const monthlyRate = (buyRate / 100) / 12;
+
+            let monthlyMortgage = 0;
+            if (loanPrincipal > 0 && loanTotalMonths > 0) {
+                if (monthlyRate > 0) {
+                    monthlyMortgage = loanPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, loanTotalMonths)) / (Math.pow(1 + monthlyRate, loanTotalMonths) - 1);
+                } else {
+                    monthlyMortgage = loanPrincipal / loanTotalMonths;
+                }
+            }
+
+            const buyInitialCost = (buyPrice * (buyInitialCostPct / 100)) + buyDownpayment;
+
+            for (let y = 1; y <= years; y++) {
+                const currentMonthlyRent = rentMonthly * Math.pow(1 + (rentInflationPct / 100), y - 1);
+                const netMonthlyRent = Math.max(0, currentMonthlyRent - rentSubsidy);
+
+                rentCumRentNet += netMonthlyRent * 12;
+                rentCumAdmin += rentAdmin * 12;
+
+                if (y % 2 === 0) {
+                    rentCumRenewalCost += currentMonthlyRent * rentRenewalMonths;
+                }
+                const rentTotalToYear = rentInitialCost + rentCumRentNet + rentCumAdmin + rentCumRenewalCost;
+                rentYearlyData.push(Math.round(rentTotalToYear));
+
+                const activePayMonths = Math.min(y * 12, loanTotalMonths);
+                const totalLoanPaid = monthlyMortgage * activePayMonths;
+
+                let remainingBalance = 0;
+                if (loanPrincipal > 0 && activePayMonths < loanTotalMonths) {
+                    if (monthlyRate > 0) {
+                        remainingBalance = loanPrincipal * (Math.pow(1 + monthlyRate, loanTotalMonths) - Math.pow(1 + monthlyRate, activePayMonths)) / (Math.pow(1 + monthlyRate, loanTotalMonths) - 1);
+                    } else {
+                        remainingBalance = loanPrincipal * (1 - activePayMonths / loanTotalMonths);
+                    }
+                }
+
+                const buyAdminTotal = buyAdminMonthly * y * 12;
+                const buyTaxTotal = buyTaxYearly * y;
+                const buyTotalOutflow = buyInitialCost + totalLoanPaid + buyAdminTotal + buyTaxTotal;
+
+                const currentEstimatedSalePrice = projectedSalePrice(landValue0, buildingValue0, buyAppreciationPct, buildingAge, y, buildingLifespan);
+                const buySaleFee = currentEstimatedSalePrice * (buySaleCostPct / 100);
+                const buyNetSaleProceeds = currentEstimatedSalePrice - buySaleFee - remainingBalance;
+                const buyNetTotalToYear = buyTotalOutflow - buyNetSaleProceeds;
+
+                buyYearlyData.push(Math.round(buyNetTotalToYear));
+            }
+
+            const rentTotalOutflow = rentInitialCost + rentCumRentNet + rentCumAdmin + rentCumRenewalCost;
+            const rentNetTotal = rentTotalOutflow;
+
+            const finalActivePayMonths = Math.min(years * 12, loanTotalMonths);
+            const finalTotalLoanPaid = monthlyMortgage * finalActivePayMonths;
+            let finalRemainingBalance = 0;
+            if (loanPrincipal > 0 && finalActivePayMonths < loanTotalMonths) {
+                if (monthlyRate > 0) {
+                    finalRemainingBalance = loanPrincipal * (Math.pow(1 + monthlyRate, loanTotalMonths) - Math.pow(1 + monthlyRate, finalActivePayMonths)) / (Math.pow(1 + monthlyRate, loanTotalMonths) - 1);
+                } else {
+                    finalRemainingBalance = loanPrincipal * (1 - finalActivePayMonths / loanTotalMonths);
+                }
+            }
+
+            const buyAdminTotal = buyAdminMonthly * years * 12;
+            const buyTaxTotal = buyTaxYearly * years;
+            const buyTotalOutflow = buyInitialCost + finalTotalLoanPaid + buyAdminTotal + buyTaxTotal;
+
+            const buySaleFee = buySalePrice * (buySaleCostPct / 100);
+            const buyNetSaleProceeds = buySalePrice - buySaleFee - finalRemainingBalance;
+            const buyNetTotal = buyTotalOutflow - buyNetSaleProceeds;
+
+            document.getElementById('sheet_period_label').textContent = `${years}年間の試算`;
+
+            document.getElementById('kpi_rent_net').textContent = formatVal(rentNetTotal);
+            document.getElementById('kpi_rent_monthly_avg').textContent = `月平均実質: ${(rentNetTotal / (years * 12)).toFixed(1)} 万円`;
+
+            const buyCard = document.getElementById('kpi_buy_card');
+            if (buyNetTotal < 0) {
+                const profit = Math.abs(buyNetTotal);
+                document.getElementById('kpi_buy_title').textContent = "🔑 購入：総実質プラス（試算上の純利益）";
+                document.getElementById('kpi_buy_net').textContent = `+${formatVal(profit)}`;
+                document.getElementById('kpi_buy_net_unit').textContent = " 万円（手元残り）";
+                document.getElementById('kpi_buy_monthly_avg').textContent = `売却益が手元に残り実質プラス ${(profit / (years * 12)).toFixed(1)} 万円/月`;
+                buyCard.className = "bg-emerald-100/80 border border-emerald-400 rounded-xl p-4 transition-all";
+            } else {
+                document.getElementById('kpi_buy_title').textContent = "🔑 購入：総実質コスト（売却手取り考慮）";
+                document.getElementById('kpi_buy_net').textContent = formatVal(buyNetTotal);
+                document.getElementById('kpi_buy_net_unit').textContent = " 万円";
+                document.getElementById('kpi_buy_monthly_avg').textContent = `月平均実質: ${(buyNetTotal / (years * 12)).toFixed(1)} 万円`;
+                buyCard.className = "bg-sky-100/70 border border-sky-300 rounded-xl p-4 transition-all";
+            }
+
+            const diff = Math.abs(rentNetTotal - buyNetTotal);
+            document.getElementById('kpi_diff_amount').textContent = formatVal(diff);
+            if (rentNetTotal > buyNetTotal) {
+                if (buyNetTotal < 0) {
+                    document.getElementById('kpi_diff_label').textContent = `賃貸の支出(${formatVal(rentNetTotal)}万)と購入の利益(+${formatVal(Math.abs(buyNetTotal))}万)の合計メリット差額です`;
+                } else {
+                    document.getElementById('kpi_diff_label').textContent = `この前提では「購入」の実質負担が少なくなります`;
+                }
+            } else if (buyNetTotal > rentNetTotal) {
+                document.getElementById('kpi_diff_label').textContent = `この前提では「賃貸」の実質負担が少なくなります`;
+            } else {
+                document.getElementById('kpi_diff_label').textContent = `両者の実質負担額は同等です`;
+            }
+
+            document.getElementById('cell_rent_initial').textContent = `${formatVal(rentInitialCost)} 万円`;
+            document.getElementById('cell_buy_initial').textContent = `${formatVal(buyInitialCost)} 万円`;
+
+            document.getElementById('cell_rent_cum_pay').textContent = `${formatVal(rentTotalOutflow)} 万円`;
+            document.getElementById('cell_buy_cum_pay').textContent = `${formatVal(buyTotalOutflow)} 万円`;
+
+            document.getElementById('cell_rent_sub_rent').textContent = `${formatVal(rentCumRentNet)} 万円`;
+            document.getElementById('cell_buy_sub_loan').textContent = `${formatVal(finalTotalLoanPaid)} 万円`;
+
+            document.getElementById('cell_rent_sub_admin').textContent = `${formatVal(rentCumAdmin + rentCumRenewalCost)} 万円`;
+            document.getElementById('cell_buy_sub_admin').textContent = `${formatVal(buyAdminTotal + buyTaxTotal)} 万円`;
+
+            document.getElementById('cell_buy_loan_remain').textContent = `${formatVal(finalRemainingBalance)} 万円`;
+            document.getElementById('cell_buy_net_sale').textContent = `${formatVal(buyNetSaleProceeds)} 万円`;
+
+            document.getElementById('cell_rent_net_total').textContent = `${formatVal(rentNetTotal)} 万円`;
+            document.getElementById('cell_buy_net_total').textContent = buyNetTotal < 0 ? `+${formatVal(Math.abs(buyNetTotal))} 万円 (利益)` : `${formatVal(buyNetTotal)} 万円`;
+
+            lastResult = { years, rentNetTotal, buyNetTotal };
+            updateChart(years, rentYearlyData, buyYearlyData);
+        }
+
+        function updateChart(years, rentData, buyData) {
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+
+            const labels = [];
+            for (let i = 1; i <= years; i++) {
+                labels.push(`${i}年目`);
+            }
+            const formattedLabels = labels.map(l => wrapLabel(l, 16));
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: formattedLabels,
+                    datasets: [
+                        {
+                            label: '🏢 賃貸：実質累計コスト',
+                            data: rentData,
+                            borderColor: '#D97706',
+                            backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: '🔑 購入：実質累計コスト（マイナスは純利益）',
+                            data: buyData,
+                            borderColor: '#0284C7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { font: { size: 11 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: '実質コスト (万円 / マイナスはプラス手取り)',
+                                font: { size: 11 }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '経過年数',
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const autoUpdateInputs = ['param_years', 'rent_monthly', 'rent_inflation', 'rent_admin', 'rent_subsidy', 'rent_initial_months', 'rent_renewal_months', 'buy_price', 'buy_appreciation', 'land_ratio', 'building_lifespan', 'buy_downpayment', 'buy_loan_years', 'buy_rate', 'buy_initial_cost_pct', 'buy_admin_monthly', 'buy_tax_yearly', 'area_zone', 'area_address', 'spec_age', 'spec_walk', 'spec_size', 'spec_renovated'];
+
+        autoUpdateInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', () => {
+                    if (id !== 'area_zone' && id !== 'area_address' && !id.startsWith('spec_')) {
+                        calculate(true);
+                    }
+                    updateUrlParams();
+                });
+            }
+        });
+
+        document.getElementById('buy_sale_price').addEventListener('input', () => {
+            calculate(false);
+            updateUrlParams();
+        });
+
+        function updateUrlParams() {
+            const params = new URLSearchParams();
+            const allInputs = [...autoUpdateInputs, 'buy_sale_price'];
+            allInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    params.set(id, el.value);
+                }
+            });
+            params.set('openExternalBrowser', '1');
+            window.history.replaceState(null, '', '#' + params.toString());
+        }
+
+        function loadFromUrlParams() {
+            if (!window.location.hash) return false;
+            const hash = window.location.hash.substring(1);
+            if (!hash) return false;
+
+            const params = new URLSearchParams(hash);
+            let loadedAny = false;
+            const allInputs = [...autoUpdateInputs, 'buy_sale_price'];
+
+            allInputs.forEach(id => {
+                if (params.has(id)) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = params.get(id);
+                        loadedAny = true;
+                    }
+                }
+            });
+            return loadedAny;
+        }
+
+        function copyConditionCode() {
+            updateUrlParams();
+            const shareUrl = window.location.href;
+
+            const tempInput = document.createElement('input');
+            tempInput.value = shareUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast("📋 現在の条件URLをコピーしました！そのままLINE等で相手に送信できます。");
+        }
+
+        function toggleRestoreInput() {
+            const box = document.getElementById('restore_box');
+            box.classList.toggle('hidden');
+        }
+
+        function applyConditionCode() {
+            const code = document.getElementById('restore_text').value.trim();
+            if (!code) return;
+
+            const cleanCode = code.includes('#') ? code.split('#')[1] : code;
+            const params = new URLSearchParams(cleanCode);
+            const allInputs = [...autoUpdateInputs, 'buy_sale_price'];
+
+            let count = 0;
+            allInputs.forEach(id => {
+                if (params.has(id)) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = params.get(id);
+                        count++;
+                    }
+                }
+            });
+
+            if (count > 0) {
+                calculate(false);
+                showToast("✅ 条件を読み込み、試算を更新しました！");
+                document.getElementById('restore_box').classList.add('hidden');
+                document.getElementById('restore_text').value = '';
+            } else {
+                showToast("⚠️ 条件コードの形式が正しくありません。");
+            }
+        }
+
+        function buildExportCard() {
+            const g = (id) => document.getElementById(id);
+            const years = Math.max(1, Math.min(40, getNum('param_years')));
+            const area = (g('area_address').value || '').trim() || '対象エリア';
+            const age = getNum('spec_age');
+            const walkSel = g('spec_walk');
+            const walk = walkSel ? '徒歩' + walkSel.options[walkSel.selectedIndex].text : '';
+            const size = getNum('spec_size');
+            const renovMap = { full: 'フルリノベ済', partial: 'リフォーム済', none: '現状(築古)' };
+            const renov = renovMap[g('spec_renovated').value] || '';
+            const price = getNum('buy_price');
+            const rate = getNum('buy_rate');
+            const loanY = getNum('buy_loan_years');
+            const rentInf = getNum('rent_inflation');
+            const buyApp = getNum('buy_appreciation');
+            const salePrice = getNum('buy_sale_price');
+            const brand = (g('brand_name') ? g('brand_name').value : '').trim();
+
+            // 設定条件（賃貸）
+            const rentMonthlyInput = getNum('rent_monthly');
+            const rentAdmin = getNum('rent_admin');
+            const rentSubsidy = getNum('rent_subsidy');
+            const rentInitMonths = getNum('rent_initial_months');
+            const rentRenewMonths = getNum('rent_renewal_months');
+            // 設定条件（購入）
+            const downpayment = getNum('buy_downpayment');
+            const initialCostPct = getNum('buy_initial_cost_pct');
+            const adminMonthly = getNum('buy_admin_monthly');
+            const taxYearly = getNum('buy_tax_yearly');
+            const landRatio = getNum('land_ratio');
+            const lifespan = getNum('building_lifespan');
+            const saleAge = age + years;
+
+            const rc = lastResult ? lastResult.rentNetTotal : 0;
+            const bc = lastResult ? lastResult.buyNetTotal : 0;
+            const rentMonthly = rc / (years * 12);
+            const buyMonthly = bc / (years * 12);
+            const diff = Math.abs(rc - bc);
+            const buyCheaper = bc <= rc;
+            const winner = buyCheaper ? '購入' : '賃貸';
+            const winnerColor = buyCheaper ? '#0284c7' : '#d97706';
+            const winnerBg = buyCheaper ? '#e0f2fe' : '#fef3c7';
+            const buyIsProfit = bc < 0;
+            const fmt = (v) => Math.round(v).toLocaleString('ja-JP');
+
+            const row = (label, val) => `<div style="display:flex;justify-content:space-between;gap:6px;padding:2px 0;"><span style="color:#64748b;">${label}</span><span style="font-weight:700;color:#334155;text-align:right;white-space:nowrap;">${val}</span></div>`;
+            const rentRows = [
+                row('月額家賃', `${rentMonthlyInput}万円`),
+                row('賃料上昇率', `${rentInf}%/年`),
+                row('共益費・管理費', `${rentAdmin}万円/月`),
+                row('家賃補助', `${rentSubsidy}万円/月`),
+                row('初期費用', `${rentInitMonths}ヶ月分`),
+                row('更新料', `${rentRenewMonths}ヶ月/2年`)
+            ].join('');
+            const buyRows = [
+                row('物件価格', `${fmt(price)}万円`),
+                row('頭金', `${fmt(downpayment)}万円`),
+                row('借入期間', `${loanY}年`),
+                row('借入金利', `${rate}%`),
+                row('購入諸費用', `${initialCostPct}%`),
+                row('管理・修繕積立', `${adminMonthly}万円/月`),
+                row('固定資産税', `${taxYearly}万円/年`),
+                row('土地割合', `${landRatio}%`),
+                row('土地変動率', `${buyApp > 0 ? '+' : ''}${buyApp}%/年`),
+                row('建物耐用年数', `${lifespan}年`),
+                row('想定売却額', `${fmt(salePrice)}万円`)
+            ].join('');
+
+            const card = document.createElement('div');
+            card.style.cssText = 'position:absolute;left:-9999px;top:0;width:456px;box-sizing:border-box;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;color:#1e293b;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;';
+            card.innerHTML = `
+                <div style="background:#0f172a;color:#ffffff;padding:18px 20px;">
+                    <div style="font-size:20px;font-weight:800;letter-spacing:.5px;">購入 vs 賃貸 試算結果</div>
+                    <div style="font-size:12px;color:#94a3b8;margin-top:4px;">${area}　｜　${years}年後・築${saleAge}年で売却する想定</div>
+                </div>
+                <div style="padding:10px 20px;background:#f1f5f9;font-size:12px;color:#475569;line-height:1.6;">
+                    築${age}年 ・ ${walk} ・ ${size}㎡ ・ ${renov} ・ 物件価格 ${fmt(price)}万円
+                </div>
+                <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;background:#fffbeb;border-left:5px solid #d97706;">
+                    <div style="font-size:12px;color:#92400e;font-weight:700;">賃貸を続けた場合 ｜ 実質総コスト</div>
+                    <div style="font-size:27px;font-weight:800;color:#92400e;line-height:1.25;">${fmt(rc)} <span style="font-size:14px;">万円</span></div>
+                    <div style="font-size:11px;color:#b45309;">月あたり実質 約 ${rentMonthly.toFixed(1)} 万円</div>
+                </div>
+                <div style="padding:14px 20px;background:${buyIsProfit ? '#ecfdf5' : '#f0f9ff'};border-left:5px solid ${buyIsProfit ? '#059669' : '#0284c7'};">
+                    <div style="font-size:12px;color:${buyIsProfit ? '#065f46' : '#075985'};font-weight:700;">購入した場合 ｜ ${buyIsProfit ? '試算上の手取りプラス' : '実質総コスト'}</div>
+                    <div style="font-size:27px;font-weight:800;color:${buyIsProfit ? '#059669' : '#075985'};line-height:1.25;">${buyIsProfit ? '+' : ''}${fmt(Math.abs(bc))} <span style="font-size:14px;">万円</span></div>
+                    <div style="font-size:11px;color:${buyIsProfit ? '#047857' : '#0369a1'};">${buyIsProfit ? '売却益が手元に残る想定' : '月あたり実質 約 ' + buyMonthly.toFixed(1) + ' 万円'}</div>
+                </div>
+                <div style="padding:16px 20px;background:${winnerBg};text-align:center;">
+                    <div style="font-size:16px;font-weight:800;color:${winnerColor};">この前提では 【${winner}】 が 約 ${fmt(diff)} 万円 おトク</div>
+                </div>
+                <div style="padding:12px 20px;background:#ffffff;">
+                    <div style="font-size:11px;font-weight:800;color:#475569;margin-bottom:6px;">■ 試算の設定条件（この条件での結果です）</div>
+                    <div style="display:flex;gap:10px;font-size:10.5px;line-height:1.5;">
+                        <div style="flex:1;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;">
+                            <div style="font-weight:800;color:#92400e;margin-bottom:4px;">賃貸の条件</div>
+                            ${rentRows}
+                        </div>
+                        <div style="flex:1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 10px;">
+                            <div style="font-weight:800;color:#075985;margin-bottom:4px;">購入の条件</div>
+                            ${buyRows}
+                        </div>
+                    </div>
+                    <div style="font-size:10px;color:#64748b;margin-top:8px;line-height:1.5;">共通：居住想定 ${years}年（${years}年後・築${saleAge}年で売却）。売却額は「土地(市況±)＋建物(築年で減価)」の二層モデルで算出。</div>
+                </div>
+                <div style="padding:10px 20px;font-size:9.5px;color:#92400e;line-height:1.5;background:#fef3c7;">
+                    ※本試算は上記の入力前提に基づく概算であり、将来の家賃・価格・金利・売却額を保証するものではありません。住宅ローン控除・修繕積立金の増額・大規模修繕・資金の運用益等は含みません。実際の条件は金融機関・専門家にご確認ください。
+                </div>
+                ${brand ? `<div style="padding:11px 20px;background:#0f172a;color:#cbd5e1;font-size:12px;text-align:center;font-weight:600;">${brand}</div>` : ''}
+            `;
+            return card;
+        }
+
+        function isMobileDevice() {
+            return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                   (navigator.maxTouchPoints > 1 && /Mac|Mac OS/i.test(navigator.platform || ''));
+        }
+
+        function canvasToBlob(canvas) {
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        function showImageOverlay(url) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.92);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;overflow:auto;';
+            overlay.innerHTML = `
+                <div style="color:#fff;font-size:13px;font-weight:700;text-align:center;margin:8px 0 12px;line-height:1.6;">
+                    画像を長押しして「&quot;写真&quot;に追加」を選ぶと<br>スマホの写真フォルダに保存できます
+                </div>
+                <img src="${url}" style="max-width:100%;height:auto;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);" alt="試算結果">
+                <button type="button" style="margin-top:16px;padding:12px 24px;background:#fff;color:#0f172a;font-weight:700;font-size:14px;border:none;border-radius:10px;">閉じる</button>
+            `;
+            overlay.querySelector('button').onclick = () => document.body.removeChild(overlay);
+            overlay.onclick = (e) => { if (e.target === overlay) document.body.removeChild(overlay); };
+            document.body.appendChild(overlay);
+        }
+
+        async function downloadResultImage() {
+            if (typeof html2canvas === 'undefined') {
+                showToast('⚠️ 画像ライブラリの読込中です。数秒後にもう一度お試しください。');
+                return;
+            }
+            if (!lastResult) { calculate(false); }
+            const card = buildExportCard();
+            document.body.appendChild(card);
+            let blob;
+            try {
+                const canvas = await html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+                blob = await canvasToBlob(canvas);
+            } catch (err) {
+                console.error(err);
+                if (document.body.contains(card)) document.body.removeChild(card);
+                showToast('⚠️ 画像化に失敗しました。');
+                return;
+            }
+            if (document.body.contains(card)) document.body.removeChild(card);
+            if (!blob) { showToast('⚠️ 画像化に失敗しました。'); return; }
+
+            const fileName = '購入vs賃貸_試算結果.png';
+            const mobile = isMobileDevice();
+
+            // Mobile: open the native share sheet → tap "画像を保存" to save into Photos
+            if (mobile && navigator.canShare) {
+                try {
+                    const file = new File([blob], fileName, { type: 'image/png' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: '購入 vs 賃貸 試算結果' });
+                        showToast('✅ 共有メニューの「画像を保存」で写真に保存できます');
+                        return;
+                    }
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return; // user canceled the share sheet
+                    // otherwise fall through to the long-press overlay
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+
+            // Mobile fallback: show the image so it can be long-pressed and saved to Photos
+            if (mobile) {
+                showImageOverlay(url);
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                return;
+            }
+
+            // Desktop: download as a file
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            showToast('✅ 結果画像を保存しました');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast_message');
+            document.getElementById('toast_text').textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const loadedFromUrl = loadFromUrlParams();
+            if (!loadedFromUrl) {
+                handleZoneChange();
+            } else {
+                // 共有URLで開いた場合は、送られてきた数値をそのまま尊重して再計算（自動上書きしない）
+                calculate(false);
+            }
+        });
+    </script>
+</body>
+</html>
